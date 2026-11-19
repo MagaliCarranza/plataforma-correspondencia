@@ -64,6 +64,10 @@ public class Usuario {
     @Default
     private boolean debeCambiarPassword = true;
 
+    @Column(name = "es_demo", nullable = false)
+    @Default
+    private boolean esDemo = false;
+
     @Column(nullable = false)
     @Default
     private Instant creadoEn = Instant.now();
