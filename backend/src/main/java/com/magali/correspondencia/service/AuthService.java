@@ -55,6 +55,11 @@ public class AuthService {
         }
 
         if (!passwordEncoder.matches(request.password(), usuario.getPasswordHash())) {
+            // Las cuentas demo no se bloquean ni acumulan intentos fallidos para que un
+            // visitante no pueda inutilizar la demo adivinando contrasenas.
+            if (usuario.isEsDemo()) {
+                throw new CredencialesInvalidasException("Usuario o contraseña incorrectos");
+            }
             usuario.setIntentosFallidos(usuario.getIntentosFallidos() + 1);
             if (usuario.getIntentosFallidos() >= maxIntentos) {
                 usuario.setBloqueada(true);

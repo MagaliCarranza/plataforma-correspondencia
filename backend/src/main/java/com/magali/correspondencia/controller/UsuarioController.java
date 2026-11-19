@@ -35,8 +35,9 @@ public class UsuarioController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CrearUsuarioResponse crear(@Valid @RequestBody CrearUsuarioRequest request) {
-        return usuarioService.crear(request);
+    public CrearUsuarioResponse crear(@Valid @RequestBody CrearUsuarioRequest request,
+                                      @AuthenticationPrincipal Jwt jwt) {
+        return usuarioService.crear(request, jwt.getSubject());
     }
 
     @GetMapping
@@ -45,8 +46,8 @@ public class UsuarioController {
     }
 
     @PostMapping("/{id}/desbloquear")
-    public UsuarioResponse desbloquear(@PathVariable Long id) {
-        return usuarioService.desbloquear(id);
+    public UsuarioResponse desbloquear(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        return usuarioService.desbloquear(id, jwt.getSubject());
     }
 
     @PutMapping("/{id}")
@@ -58,8 +59,9 @@ public class UsuarioController {
     }
 
     @PostMapping("/{id}/resetear-password")
-    public CrearUsuarioResponse resetearPassword(@PathVariable Long id) {
-        return usuarioService.resetearPassword(id);
+    public CrearUsuarioResponse resetearPassword(@PathVariable Long id,
+                                                 @AuthenticationPrincipal Jwt jwt) {
+        return usuarioService.resetearPassword(id, jwt.getSubject());
     }
 
     @GetMapping("/mensajeros")

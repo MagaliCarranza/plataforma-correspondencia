@@ -27,6 +27,13 @@ public class UsuarioService {
     private static final Logger log = LoggerFactory.getLogger(UsuarioService.class);
     private static final String ALFABETO_TEMP = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
     private static final int LONGITUD_PASSWORD_TEMP = 10;
+    private static final String MSG_DEMO_NO_TOCA_ADMIN =
+            "Las cuentas demo no pueden modificar usuarios con rol ADMIN ni otras cuentas demo. "
+                    + "Espera al reset nocturno o usa credenciales reales.";
+    private static final String MSG_DEMO_NO_CREA_ADMIN =
+            "Las cuentas demo no pueden crear usuarios con rol ADMIN.";
+    private static final String MSG_DEMO_SIN_CAMBIAR_PASSWORD =
+            "La cuenta demo no puede cambiar su contrasena; se restablece en el reset nocturno.";
 
     private final UsuarioRepository usuarioRepository;
     private final AreaRepository areaRepository;
@@ -42,7 +49,11 @@ public class UsuarioService {
     }
 
     @Transactional
-    public CrearUsuarioResponse crear(CrearUsuarioRequest request) {
+    public CrearUsuarioResponse crear(CrearUsuarioRequest request, String usernameActor) {
+        Usuario actor = cargarActor(usernameActor);
+        if (actor.isEsDemo() && request.rol() == Rol.ADMIN) {
+            throw new ReglaNegocioException(MSG_DEMO_NO_CREA_ADMIN);
+        }
         if (usuarioRepository.existsByUsername(request.username())) {
             throw new ReglaNegocioException("El nombre de usuario ya esta en uso");
         }
@@ -61,6 +72,7 @@ public class UsuarioService {
                 .rol(request.rol())
                 .area(area)
                 .debeCambiarPassword(true)
+                .esDemo(false)
                 .build();
 
         Usuario guardado = usuarioRepository.save(usuario);
@@ -95,6 +107,10 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
 
+        if (usuario.isEsDemo()) {
+            throw new ReglaNegocioException(MSG_DEMO_SIN_CAMBIAR_PASSWORD);
+        }
+
         if (!passwordEncoder.matches(request.passwordActual(), usuario.getPasswordHash())) {
             throw new ReglaNegocioException("La contraseña actual no es correcta");
         }
@@ -108,24 +124,34 @@ public class UsuarioService {
     }
 
     @Transactional
-    public UsuarioResponse desbloquear(Long id) {
+    public UsuarioResponse desbloquear(Long id, String usernameActor) {
+        Usuario actor = cargarActor(usernameActor);
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+        if (actor.isEsDemo() && (usuario.isEsDemo() || usuario.getRol() == Rol.ADMIN)) {
+            throw new ReglaNegocioException(MSG_DEMO_NO_TOCA_ADMIN);
+        }
         usuario.setBloqueada(false);
         usuario.setIntentosFallidos(0);
         return mapearRespuesta(usuarioRepository.save(usuario));
     }
 
     @Transactional
-    public UsuarioResponse actualizar(Long id, ActualizarUsuarioRequest request, String usernameAdmin) {
+    public UsuarioResponse actualizar(Long id, ActualizarUsuarioRequest request, String usernameActor) {
+        Usuario actor = cargarActor(usernameActor);
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+
+        if (actor.isEsDemo()
+                && (usuario.isEsDemo() || usuario.getRol() == Rol.ADMIN || request.rol() == Rol.ADMIN)) {
+            throw new ReglaNegocioException(MSG_DEMO_NO_TOCA_ADMIN);
+        }
 
         if (usuarioRepository.existsByEmailAndIdNot(request.email(), id)) {
             throw new ReglaNegocioException("El correo electrónico ya está registrado por otro usuario");
         }
 
-        boolean esSiMismo = usuario.getUsername().equals(usernameAdmin);
+        boolean esSiMismo = usuario.getUsername().equals(usernameActor);
         if (esSiMismo && usuario.getRol() == Rol.ADMIN && request.rol() != Rol.ADMIN) {
             throw new ReglaNegocioException("No puedes quitarte a ti mismo el rol de administrador");
         }
@@ -141,9 +167,13 @@ public class UsuarioService {
     }
 
     @Transactional
-    public CrearUsuarioResponse resetearPassword(Long id) {
+    public CrearUsuarioResponse resetearPassword(Long id, String usernameActor) {
+        Usuario actor = cargarActor(usernameActor);
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+        if (actor.isEsDemo() && (usuario.isEsDemo() || usuario.getRol() == Rol.ADMIN)) {
+            throw new ReglaNegocioException(MSG_DEMO_NO_TOCA_ADMIN);
+        }
 
         String passwordTemporal = generarPasswordTemporal();
         usuario.setPasswordHash(passwordEncoder.encode(passwordTemporal));
@@ -154,6 +184,12 @@ public class UsuarioService {
         Usuario guardado = usuarioRepository.save(usuario);
         log.info("Contraseña reseteada para usuario: {}", guardado.getUsername());
         return new CrearUsuarioResponse(mapearRespuesta(guardado), passwordTemporal);
+    }
+
+    private Usuario cargarActor(String usernameActor) {
+        return usuarioRepository.findByUsername(usernameActor)
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Usuario autenticado no encontrado: " + usernameActor));
     }
 
     private String generarPasswordTemporal() {
