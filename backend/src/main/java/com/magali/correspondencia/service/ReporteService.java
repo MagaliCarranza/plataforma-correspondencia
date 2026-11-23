@@ -20,12 +20,13 @@ import com.magali.correspondencia.model.Prioridad;
 import com.magali.correspondencia.repository.AreaRepository;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +37,6 @@ public class ReporteService {
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter FORMATO_FECHA =
             DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final ZoneId ZONA = ZoneId.systemDefault();
 
     private static final Font FUENTE_TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, new Color(44, 90, 160));
     private static final Font FUENTE_SUBTITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, new Color(31, 41, 55));
@@ -49,10 +49,14 @@ public class ReporteService {
 
     private final CorrespondenciaService correspondenciaService;
     private final AreaRepository areaRepository;
+    private final ZoneId zona;
 
-    public ReporteService(CorrespondenciaService correspondenciaService, AreaRepository areaRepository) {
+    public ReporteService(CorrespondenciaService correspondenciaService,
+                          AreaRepository areaRepository,
+                          @Value("${correspondencia.zona-horaria}") String zonaHoraria) {
         this.correspondenciaService = correspondenciaService;
         this.areaRepository = areaRepository;
+        this.zona = ZoneId.of(zonaHoraria);
     }
 
     @Transactional(readOnly = true)
@@ -80,7 +84,7 @@ public class ReporteService {
         doc.add(titulo);
 
         String meta = "Generado por: " + usuario + "  |  Fecha: "
-                + LocalDateTime.now().format(FORMATO_FECHA_HORA) + "  |  Total: " + total;
+                + ZonedDateTime.now(zona).format(FORMATO_FECHA_HORA) + "  |  Total: " + total;
         Paragraph paramMeta = new Paragraph(meta, FUENTE_META);
         paramMeta.setSpacingAfter(6);
         doc.add(paramMeta);
@@ -164,7 +168,7 @@ public class ReporteService {
             Color fondo = zebra ? COLOR_ZEBRA : Color.WHITE;
             agregarCeldaFila(tabla, c.getFolio(), fondo);
             agregarCeldaFila(tabla,
-                    LocalDateTime.ofInstant(c.getFechaRecepcion(), ZONA).format(FORMATO_FECHA_HORA), fondo);
+                    c.getFechaRecepcion().atZone(zona).format(FORMATO_FECHA_HORA), fondo);
             agregarCeldaFila(tabla, c.getRemitente(), fondo);
             agregarCeldaFila(tabla, c.getAsunto(), fondo);
             agregarCeldaFila(tabla, c.getAreaDestino().getNombre(), fondo);
