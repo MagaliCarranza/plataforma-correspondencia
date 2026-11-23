@@ -210,6 +210,7 @@ public class UsuarioService {
                 u.getArea().getNombre(),
                 u.getArea().getId(),
                 u.isBloqueada(),
-                u.isDebeCambiarPassword());
+                u.isDebeCambiarPassword(),
+                u.isEsDemo());
     }
 }

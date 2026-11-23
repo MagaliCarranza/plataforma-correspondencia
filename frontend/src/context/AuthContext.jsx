@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
       rol: data.rol,
       area: data.area,
       debeCambiarPassword: data.debeCambiarPassword,
+      esDemo: data.esDemo === true,
     };
     localStorage.setItem("token", data.token);
     localStorage.setItem("usuario", JSON.stringify(perfil));

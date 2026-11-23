@@ -10,6 +10,11 @@ export function Layout() {
 
   return (
     <div className="layout">
+      {usuario?.esDemo && (
+        <div className="banner-demo">
+          Modo demo &middot; los datos se reinician cada noche a las 3:00 (America/Mexico_City).
+        </div>
+      )}
       <header className="layout-header">
         <div className="layout-brand">
           <Link to="/inicio">Correspondencia</Link>

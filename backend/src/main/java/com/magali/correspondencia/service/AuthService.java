@@ -82,7 +82,8 @@ public class AuthService {
                 usuario.getNombreCompleto(),
                 usuario.getRol().name(),
                 usuario.getArea().getNombre(),
-                usuario.isDebeCambiarPassword());
+                usuario.isDebeCambiarPassword(),
+                usuario.isEsDemo());
     }
 
     private String emitirToken(Usuario usuario) {
@@ -94,6 +95,7 @@ public class AuthService {
                 .subject(usuario.getUsername())
                 .claim("rol", usuario.getRol().name())
                 .claim("nombre", usuario.getNombreCompleto())
+                .claim("esDemo", usuario.isEsDemo())
                 .build();
         JwsHeader header = JwsHeader.with(() -> "HS256").build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
