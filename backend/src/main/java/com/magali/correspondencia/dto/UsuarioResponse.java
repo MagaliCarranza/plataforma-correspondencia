@@ -9,5 +9,6 @@ public record UsuarioResponse(
         String area,
         Long areaId,
         boolean bloqueada,
-        boolean debeCambiarPassword
+        boolean debeCambiarPassword,
+        boolean esDemo
 ) {}

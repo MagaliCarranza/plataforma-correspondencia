@@ -6,5 +6,6 @@ public record LoginResponse(
         String nombreCompleto,
         String rol,
         String area,
-        boolean debeCambiarPassword
+        boolean debeCambiarPassword,
+        boolean esDemo
 ) {}
